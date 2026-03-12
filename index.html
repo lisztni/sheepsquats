@@ -2,13 +2,11 @@
 <html lang="kk">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Қой көтеру - Minimalist Squat Tracker</title>
   
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- MediaPipe -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 
@@ -17,44 +15,42 @@
     #canvas {
       transform: scaleX(-1);
     }
+    /* Убираем выделение при тапах на мобильных */
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
   </style>
 </head>
-<body class="min-h-screen bg-black flex items-center justify-center p-4 font-sans selection:bg-amber-500/30">
+<body class="min-h-[100dvh] bg-black flex items-center justify-center sm:p-4 font-sans selection:bg-amber-500/30 overflow-hidden">
   
-  <div class="relative w-full max-w-5xl aspect-[4/3] md:aspect-video bg-zinc-900 rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-white/10">
+  <div class="relative w-full h-[100dvh] sm:h-auto sm:max-w-5xl sm:aspect-[4/3] md:aspect-video bg-zinc-900 sm:rounded-[2rem] overflow-hidden sm:shadow-2xl sm:ring-1 sm:ring-white/10">
     
-    <!-- Скрытое видео для MediaPipe -->
     <video id="video" class="hidden" playsinline autoplay muted></video>
     
-    <!-- Основной Canvas с изображением камеры -->
     <canvas id="canvas" class="w-full h-full object-cover hidden" width="640" height="480"></canvas>
 
-    <!-- Оверлей до старта -->
-    <div id="startOverlay" class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center backdrop-blur-md z-10">
-      <div class="w-24 h-24 mb-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 shadow-2xl">
-        <svg class="w-10 h-10 text-white/80 ml-2" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    <div id="startOverlay" class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center backdrop-blur-md z-10 px-4 text-center">
+      <div class="w-20 h-20 sm:w-24 sm:h-24 mb-6 sm:mb-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 shadow-2xl backdrop-blur-lg">
+        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-white/80 ml-2" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
       </div>
-      <h1 class="text-4xl font-bold text-white mb-3 tracking-tight">Қой көтеру</h1>
-      <p class="text-zinc-400 text-lg">Камераны қосу үшін бастау түймесін басыңыз</p>
+      <h1 class="text-3xl sm:text-4xl font-bold text-white mb-2 sm:mb-3 tracking-tight">Қой көтеру</h1>
+      <p class="text-zinc-400 text-base sm:text-lg">Камераны қосу үшін бастау түймесін басыңыз</p>
     </div>
 
-    <!-- Динамическая шкала приседания (Слева) -->
-    <div id="progressContainer" class="hidden absolute left-6 top-1/2 -translate-y-1/2 w-6 h-2/3 bg-black/40 rounded-full border border-white/10 overflow-hidden backdrop-blur-md z-20 shadow-xl">
+    <div id="progressContainer" class="hidden absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 w-4 sm:w-6 h-1/2 sm:h-2/3 bg-white/5 rounded-full border border-white/20 overflow-hidden backdrop-blur-xl z-20 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
       <div id="progressBar" class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-amber-500 to-yellow-400 transition-all duration-75 ease-out" style="height: 0%"></div>
     </div>
 
-    <!-- Минималистичный счетчик (Справа сверху) -->
-    <div id="counterContainer" class="hidden absolute top-8 right-10 flex flex-col items-end z-20">
-      <span class="text-white/50 text-sm uppercase tracking-widest font-bold mb-1 drop-shadow-md">Есеп</span>
-      <span id="counterText" class="text-8xl font-black text-white drop-shadow-2xl tabular-nums leading-none">0</span>
+    <div id="counterContainer" class="hidden absolute top-4 right-4 sm:top-8 sm:right-10 flex flex-col items-end z-20 bg-white/5 backdrop-blur-xl border border-white/20 px-4 py-2 sm:px-6 sm:py-3 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+      <span class="text-white/60 text-xs sm:text-sm uppercase tracking-widest font-bold mb-1">Есеп</span>
+      <span id="counterText" class="text-6xl sm:text-8xl font-black text-white drop-shadow-2xl tabular-nums leading-none">0</span>
     </div>
 
-    <!-- Кнопка управления (Снизу по центру) -->
-    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
-      <button id="toggleBtn" class="px-8 py-4 rounded-full backdrop-blur-xl border font-semibold flex items-center gap-3 transition-all duration-300 hover:scale-105 active:scale-95 shadow-2xl bg-white/10 border-white/20 text-white hover:bg-white/20">
-        <svg id="btnIconPlay" class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        <svg id="btnIconStop" class="w-5 h-5 fill-current hidden" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
-        <span id="btnText" class="text-lg tracking-wide">Бастау</span>
+    <div class="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-30 w-[90%] sm:w-auto flex justify-center">
+      <button id="toggleBtn" class="w-full sm:w-auto px-8 py-4 sm:py-4 rounded-2xl sm:rounded-full backdrop-blur-xl bg-white/10 border border-white/30 text-white font-semibold flex items-center justify-center gap-3 transition-all duration-300 hover:bg-white/20 active:scale-95 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+        <svg id="btnIconPlay" class="w-6 h-6 sm:w-5 sm:h-5 fill-current drop-shadow-md" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="btnIconStop" class="w-6 h-6 sm:w-5 sm:h-5 fill-current drop-shadow-md hidden" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+        <span id="btnText" class="text-lg sm:text-lg tracking-wide drop-shadow-md">Бастау</span>
       </button>
     </div>
 
@@ -75,7 +71,6 @@
     const btnIconPlay = document.getElementById('btnIconPlay');
     const btnIconStop = document.getElementById('btnIconStop');
 
-    // Звук успешного выполнения (короткий приятный "динь")
     const successSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
 
     let isTracking = false;
@@ -95,7 +90,7 @@
     });
 
     pose.setOptions({
-      modelComplexity: 1,
+      modelComplexity: 1, // На мобильных можно поставить 0 для большей производительности, если будет тормозить
       smoothLandmarks: true,
       enableSegmentation: false,
       minDetectionConfidence: 0.5,
@@ -108,7 +103,6 @@
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
       
-      // Отрисовываем только видео (без костей и точек)
       canvasCtx.translate(canvasElement.width, 0);
       canvasCtx.scale(-1, 1);
       canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
@@ -133,33 +127,25 @@
         if (hip.visibility > 0.5 && knee.visibility > 0.5 && ankle.visibility > 0.5) {
           const angle = calculateAngle(hip, knee, ankle);
           
-          // Вычисляем прогресс приседания (170 градусов = 0%, 90 градусов = 100%)
           const progress = Math.max(0, Math.min(100, ((170 - angle) / (170 - 90)) * 100));
-          
-          // Обновляем шкалу прогресса
           progressBar.style.height = `${progress}%`;
           
           if (angle <= 90) {
-            // Достигнута нужная глубина - шкала становится ярко-зеленой
             progressBar.className = "absolute bottom-0 left-0 w-full transition-all duration-75 ease-out bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.8)]";
             isDeep = true;
           } else {
-            // В процессе - градиент от желтого к оранжевому
             progressBar.className = "absolute bottom-0 left-0 w-full transition-all duration-75 ease-out bg-gradient-to-t from-amber-500 to-yellow-400";
           }
 
-          // Логика засчитывания повторения при подъеме
           if (angle >= 160 && isDeep) {
             count += 1;
             isDeep = false;
             counterText.innerText = count;
             
-            // Воспроизводим звук
             successSound.currentTime = 0;
             successSound.play().catch(() => {});
           }
         } else {
-          // Если человека не видно, сбрасываем шкалу
           progressBar.style.height = '0%';
         }
       }
@@ -167,7 +153,6 @@
 
     toggleBtn.addEventListener('click', () => {
       if (!isTracking) {
-        // Инициализация звука (требует действия пользователя в браузере)
         successSound.play().then(() => {
           successSound.pause();
           successSound.currentTime = 0;
@@ -187,10 +172,8 @@
         btnText.innerText = 'Тоқтату';
         btnIconPlay.classList.add('hidden');
         btnIconStop.classList.remove('hidden');
-        toggleBtn.classList.replace('bg-white/10', 'bg-red-500/20');
-        toggleBtn.classList.replace('border-white/20', 'border-red-500/50');
-        toggleBtn.classList.replace('text-white', 'text-red-100');
-        toggleBtn.classList.replace('hover:bg-white/20', 'hover:bg-red-500/30');
+        // Обновляем стили кнопки для состояния "Стоп" (Glassmorphism с красным оттенком)
+        toggleBtn.className = "w-full sm:w-auto px-8 py-4 sm:py-4 rounded-2xl sm:rounded-full backdrop-blur-xl bg-red-500/20 border border-red-500/40 text-white font-semibold flex items-center justify-center gap-3 transition-all duration-300 hover:bg-red-500/30 active:scale-95 shadow-[0_8px_32px_rgba(239,68,68,0.2)]";
 
         if (!camera) {
           camera = new Camera(videoElement, {
@@ -219,10 +202,8 @@
         btnText.innerText = 'Бастау';
         btnIconPlay.classList.remove('hidden');
         btnIconStop.classList.add('hidden');
-        toggleBtn.classList.replace('bg-red-500/20', 'bg-white/10');
-        toggleBtn.classList.replace('border-red-500/50', 'border-white/20');
-        toggleBtn.classList.replace('text-red-100', 'text-white');
-        toggleBtn.classList.replace('hover:bg-red-500/30', 'hover:bg-white/20');
+        // Возвращаем исходные стили кнопки
+        toggleBtn.className = "w-full sm:w-auto px-8 py-4 sm:py-4 rounded-2xl sm:rounded-full backdrop-blur-xl bg-white/10 border border-white/30 text-white font-semibold flex items-center justify-center gap-3 transition-all duration-300 hover:bg-white/20 active:scale-95 shadow-[0_8px_32px_rgba(0,0,0,0.3)]";
       }
     });
   </script>
