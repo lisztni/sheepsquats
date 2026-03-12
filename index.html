@@ -3,54 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Қой көтеру - Minimalist Squat Tracker</title>
+  <title>Қой көтеру - Squat Tracker</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
-  
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 
   <style>
-    /* Зеркальное отображение для естественности */
-    #canvas {
-      transform: scaleX(-1);
-    }
-    /* Убираем выделение при тапах на мобильных */
-    button {
-      -webkit-tap-highlight-color: transparent;
-    }
+    #canvas { transform: scaleX(-1); }
+    body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    /* Плавное свечение для шкалы */
+    .glow-green { shadow-[0_0_25px_rgba(34,197,94,0.9)]; }
   </style>
 </head>
-<body class="min-h-[100dvh] bg-black flex items-center justify-center sm:p-4 font-sans selection:bg-amber-500/30 overflow-hidden">
+<body class="min-h-[100dvh] bg-black flex items-center justify-center sm:p-4 font-sans overflow-hidden">
   
-  <div class="relative w-full h-[100dvh] sm:h-auto sm:max-w-5xl sm:aspect-[4/3] md:aspect-video bg-zinc-900 sm:rounded-[2rem] overflow-hidden sm:shadow-2xl sm:ring-1 sm:ring-white/10">
+  <div class="relative w-full h-[100dvh] sm:h-auto sm:max-w-5xl sm:aspect-[4/3] md:aspect-video bg-zinc-900 sm:rounded-[2rem] overflow-hidden sm:shadow-2xl">
     
     <video id="video" class="hidden" playsinline autoplay muted></video>
-    
-    <canvas id="canvas" class="w-full h-full object-cover hidden" width="640" height="480"></canvas>
+    <canvas id="canvas" class="w-full h-full object-cover hidden"></canvas>
 
-    <div id="startOverlay" class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center backdrop-blur-md z-10 px-4 text-center">
-      <div class="w-20 h-20 sm:w-24 sm:h-24 mb-6 sm:mb-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 shadow-2xl backdrop-blur-lg">
-        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-white/80 ml-2" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 to-transparent z-20"></div>
+
+    <div id="startOverlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center backdrop-blur-md z-40 px-4 text-center">
+      <div class="w-20 h-20 mb-6 rounded-full bg-amber-500 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.5)]">
+        <svg class="w-10 h-10 text-black ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
       </div>
-      <h1 class="text-3xl sm:text-4xl font-bold text-white mb-2 sm:mb-3 tracking-tight">Қой көтеру</h1>
-      <p class="text-zinc-400 text-base sm:text-lg">Камераны қосу үшін бастау түймесін басыңыз</p>
+      <h1 class="text-4xl font-bold text-white mb-3 tracking-tight">Қой көтеру</h1>
+      <p class="text-zinc-300 text-lg max-w-xs">Камераны қосу және сайысты бастау үшін түймені басыңыз</p>
     </div>
 
-    <div id="progressContainer" class="hidden absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 w-4 sm:w-6 h-1/2 sm:h-2/3 bg-white/5 rounded-full border border-white/20 overflow-hidden backdrop-blur-xl z-20 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
-      <div id="progressBar" class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-amber-500 to-yellow-400 transition-all duration-75 ease-out" style="height: 0%"></div>
+    <div id="progressContainer" class="hidden absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 w-5 sm:w-8 h-1/2 bg-black/60 rounded-full border-2 border-white/30 overflow-hidden backdrop-blur-xl z-30 shadow-2xl">
+      <div id="progressBar" class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-amber-600 to-yellow-400 transition-all duration-75 ease-out" style="height: 0%"></div>
     </div>
 
-    <div id="counterContainer" class="hidden absolute top-4 right-4 sm:top-8 sm:right-10 flex flex-col items-end z-20 bg-white/5 backdrop-blur-xl border border-white/20 px-4 py-2 sm:px-6 sm:py-3 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
-      <span class="text-white/60 text-xs sm:text-sm uppercase tracking-widest font-bold mb-1">Есеп</span>
-      <span id="counterText" class="text-6xl sm:text-8xl font-black text-white drop-shadow-2xl tabular-nums leading-none">0</span>
+    <div id="counterContainer" class="hidden absolute top-6 right-6 flex flex-col items-end z-30 bg-black/70 backdrop-blur-md border border-white/20 px-6 py-4 rounded-3xl shadow-2xl">
+      <span class="text-amber-500 text-xs sm:text-sm uppercase tracking-[0.2em] font-black mb-1">Нәтиже</span>
+      <span id="counterText" class="text-7xl sm:text-8xl font-black text-white tabular-nums leading-none">0</span>
     </div>
 
-    <div class="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-30 w-[90%] sm:w-auto flex justify-center">
-      <button id="toggleBtn" class="w-full sm:w-auto px-8 py-4 sm:py-4 rounded-2xl sm:rounded-full backdrop-blur-xl bg-white/10 border border-white/30 text-white font-semibold flex items-center justify-center gap-3 transition-all duration-300 hover:bg-white/20 active:scale-95 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
-        <svg id="btnIconPlay" class="w-6 h-6 sm:w-5 sm:h-5 fill-current drop-shadow-md" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        <svg id="btnIconStop" class="w-6 h-6 sm:w-5 sm:h-5 fill-current drop-shadow-md hidden" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
-        <span id="btnText" class="text-lg sm:text-lg tracking-wide drop-shadow-md">Бастау</span>
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 w-[85%] sm:w-auto">
+      <button id="toggleBtn" class="w-full sm:px-12 py-5 rounded-2xl backdrop-blur-2xl bg-white/20 border-2 border-white/40 text-white font-bold flex items-center justify-center gap-4 transition-all active:scale-95 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+        <div id="btnIconContainer" class="bg-white text-black p-1 rounded-full">
+           <svg id="btnIconPlay" class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+           <svg id="btnIconStop" class="w-6 h-6 fill-current hidden" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+        </div>
+        <span id="btnText" class="text-xl tracking-wider uppercase">Бастау</span>
       </button>
     </div>
 
@@ -61,22 +59,20 @@
     const canvasElement = document.getElementById('canvas');
     const canvasCtx = canvasElement.getContext('2d');
     
-    const startOverlay = document.getElementById('startOverlay');
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBar = document.getElementById('progressBar');
-    const counterContainer = document.getElementById('counterContainer');
-    const counterText = document.getElementById('counterText');
-    const toggleBtn = document.getElementById('toggleBtn');
-    const btnText = document.getElementById('btnText');
-    const btnIconPlay = document.getElementById('btnIconPlay');
-    const btnIconStop = document.getElementById('btnIconStop');
+    const elements = {
+      overlay: document.getElementById('startOverlay'),
+      progress: document.getElementById('progressContainer'),
+      bar: document.getElementById('progressBar'),
+      counter: document.getElementById('counterContainer'),
+      text: document.getElementById('counterText'),
+      btn: document.getElementById('toggleBtn'),
+      btnText: document.getElementById('btnText'),
+      iconPlay: document.getElementById('btnIconPlay'),
+      iconStop: document.getElementById('btnIconStop')
+    };
 
     const successSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
-
-    let isTracking = false;
-    let count = 0;
-    let isDeep = false;
-    let camera = null;
+    let isTracking = false, count = 0, isDeep = false, camera = null;
 
     function calculateAngle(a, b, c) {
       const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
@@ -89,121 +85,83 @@
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
     });
 
-    pose.setOptions({
-      modelComplexity: 1, // На мобильных можно поставить 0 для большей производительности, если будет тормозить
-      smoothLandmarks: true,
-      enableSegmentation: false,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
-    });
+    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
 
     pose.onResults((results) => {
       if (!isTracking) return;
 
+      // ИСПРАВЛЕНИЕ РАСТЯГИВАНИЯ: Синхронизируем размер канваса с видеопотоком
+      if (canvasElement.width !== results.image.width) {
+        canvasElement.width = results.image.width;
+        canvasElement.height = results.image.height;
+      }
+
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      
       canvasCtx.translate(canvasElement.width, 0);
       canvasCtx.scale(-1, 1);
       canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
       canvasCtx.restore();
 
       if (results.poseLandmarks) {
-        const rightHip = results.poseLandmarks[24];
-        const rightKnee = results.poseLandmarks[26];
-        const rightAnkle = results.poseLandmarks[28];
-        
-        const leftHip = results.poseLandmarks[23];
-        const leftKnee = results.poseLandmarks[25];
-        const leftAnkle = results.poseLandmarks[27];
+        const landmarks = results.poseLandmarks;
+        const leftKnee = landmarks[25], leftHip = landmarks[23], leftAnkle = landmarks[27];
+        const rightKnee = landmarks[26], rightHip = landmarks[24], rightAnkle = landmarks[28];
 
-        const rightVis = (rightHip.visibility + rightKnee.visibility + rightAnkle.visibility) / 3;
-        const leftVis = (leftHip.visibility + leftKnee.visibility + leftAnkle.visibility) / 3;
+        // Выбираем ту ногу, которую лучше видно
+        const useRight = rightKnee.visibility > leftKnee.visibility;
+        const hip = useRight ? rightHip : leftHip;
+        const knee = useRight ? rightKnee : leftKnee;
+        const ankle = useRight ? rightAnkle : leftAnkle;
 
-        const hip = rightVis > leftVis ? rightHip : leftHip;
-        const knee = rightVis > leftVis ? rightKnee : leftKnee;
-        const ankle = rightVis > leftVis ? rightAnkle : leftAnkle;
-
-        if (hip.visibility > 0.5 && knee.visibility > 0.5 && ankle.visibility > 0.5) {
+        if (knee.visibility > 0.6) {
           const angle = calculateAngle(hip, knee, ankle);
-          
           const progress = Math.max(0, Math.min(100, ((170 - angle) / (170 - 90)) * 100));
-          progressBar.style.height = `${progress}%`;
+          elements.bar.style.height = `${progress}%`;
           
-          if (angle <= 90) {
-            progressBar.className = "absolute bottom-0 left-0 w-full transition-all duration-75 ease-out bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.8)]";
+          if (angle <= 95) {
+            elements.bar.className = "absolute bottom-0 left-0 w-full transition-all duration-75 bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.8)]";
             isDeep = true;
           } else {
-            progressBar.className = "absolute bottom-0 left-0 w-full transition-all duration-75 ease-out bg-gradient-to-t from-amber-500 to-yellow-400";
+            elements.bar.className = "absolute bottom-0 left-0 w-full transition-all duration-75 bg-gradient-to-t from-amber-600 to-yellow-400";
           }
 
           if (angle >= 160 && isDeep) {
-            count += 1;
+            count++;
             isDeep = false;
-            counterText.innerText = count;
-            
+            elements.text.innerText = count;
             successSound.currentTime = 0;
             successSound.play().catch(() => {});
           }
-        } else {
-          progressBar.style.height = '0%';
         }
       }
     });
 
-    toggleBtn.addEventListener('click', () => {
+    elements.btn.addEventListener('click', async () => {
       if (!isTracking) {
-        successSound.play().then(() => {
-          successSound.pause();
-          successSound.currentTime = 0;
-        }).catch(() => {});
-
         isTracking = true;
         count = 0;
-        isDeep = false;
-        counterText.innerText = '0';
-        progressBar.style.height = '0%';
+        elements.text.innerText = '0';
         
-        startOverlay.classList.add('hidden');
+        elements.overlay.classList.add('hidden');
         canvasElement.classList.remove('hidden');
-        progressContainer.classList.remove('hidden');
-        counterContainer.classList.remove('hidden');
+        elements.progress.classList.remove('hidden');
+        elements.counter.classList.remove('hidden');
         
-        btnText.innerText = 'Тоқтату';
-        btnIconPlay.classList.add('hidden');
-        btnIconStop.classList.remove('hidden');
-        // Обновляем стили кнопки для состояния "Стоп" (Glassmorphism с красным оттенком)
-        toggleBtn.className = "w-full sm:w-auto px-8 py-4 sm:py-4 rounded-2xl sm:rounded-full backdrop-blur-xl bg-red-500/20 border border-red-500/40 text-white font-semibold flex items-center justify-center gap-3 transition-all duration-300 hover:bg-red-500/30 active:scale-95 shadow-[0_8px_32px_rgba(239,68,68,0.2)]";
+        elements.btnText.innerText = 'Тоқтату';
+        elements.iconPlay.classList.add('hidden');
+        elements.iconStop.classList.remove('hidden');
+        elements.btn.classList.replace('bg-white/20', 'bg-red-600/40');
+        elements.btn.classList.add('border-red-500/50');
 
         if (!camera) {
           camera = new Camera(videoElement, {
-            onFrame: async () => {
-              if (isTracking) {
-                await pose.send({ image: videoElement });
-              }
-            },
-            width: 640,
-            height: 480
+            onFrame: async () => { await pose.send({ image: videoElement }); }
           });
         }
-        camera.start();
-
+        await camera.start();
       } else {
-        isTracking = false;
-        if (camera) {
-          camera.stop();
-        }
-        
-        startOverlay.classList.remove('hidden');
-        canvasElement.classList.add('hidden');
-        progressContainer.classList.add('hidden');
-        counterContainer.classList.add('hidden');
-        
-        btnText.innerText = 'Бастау';
-        btnIconPlay.classList.remove('hidden');
-        btnIconStop.classList.add('hidden');
-        // Возвращаем исходные стили кнопки
-        toggleBtn.className = "w-full sm:w-auto px-8 py-4 sm:py-4 rounded-2xl sm:rounded-full backdrop-blur-xl bg-white/10 border border-white/30 text-white font-semibold flex items-center justify-center gap-3 transition-all duration-300 hover:bg-white/20 active:scale-95 shadow-[0_8px_32px_rgba(0,0,0,0.3)]";
+        location.reload(); // Простой способ сбросить всё состояние
       }
     });
   </script>
