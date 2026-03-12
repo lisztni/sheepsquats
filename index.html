@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Қой көтеру - Squat Tracker</title>
+  <title>Қой көтеру - Minimalist Squat Tracker</title>
   
-  <!-- Tailwind CSS для стилей -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- MediaPipe для распознавания позы -->
+  <!-- MediaPipe -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 
   <style>
@@ -18,143 +17,71 @@
     #canvas {
       transform: scaleX(-1);
     }
-    .bg-ornament {
-      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30c-5-5-10-5-15 0s-5 10 0 15 10 5 15 0 5-10 0-15-10-5-15 0' fill='none' stroke='%23fbbf24' stroke-width='2'/%3E%3C/svg%3E");
-    }
   </style>
 </head>
-<body class="min-h-screen bg-slate-900 text-white font-sans relative overflow-hidden">
+<body class="min-h-screen bg-black flex items-center justify-center p-4 font-sans selection:bg-amber-500/30">
   
-  <!-- Фоновый орнамент -->
-  <div class="absolute inset-0 opacity-5 pointer-events-none bg-ornament"></div>
-  
-  <div class="max-w-4xl mx-auto p-6 relative z-10">
-    <!-- Шапка -->
-    <header class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
-      <div>
-        <h1 class="text-4xl font-bold text-amber-400 tracking-tight flex items-center gap-3">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-          Қой көтеру
-        </h1>
-        <p class="text-slate-400 mt-1">AI Squat Tracker for National Sports</p>
+  <div class="relative w-full max-w-5xl aspect-[4/3] md:aspect-video bg-zinc-900 rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-white/10">
+    
+    <!-- Скрытое видео для MediaPipe -->
+    <video id="video" class="hidden" playsinline autoplay muted></video>
+    
+    <!-- Основной Canvas с изображением камеры -->
+    <canvas id="canvas" class="w-full h-full object-cover hidden" width="640" height="480"></canvas>
+
+    <!-- Оверлей до старта -->
+    <div id="startOverlay" class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center backdrop-blur-md z-10">
+      <div class="w-24 h-24 mb-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 shadow-2xl">
+        <svg class="w-10 h-10 text-white/80 ml-2" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
       </div>
-      <button id="soundToggleBtn" class="p-3 rounded-full bg-slate-800 hover:bg-slate-700 transition-colors text-amber-400">
-        <!-- Иконка звука -->
-        <svg id="soundIconOn" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l5 5V3l-5 5H7a2 2 0 00-2 2z"></path></svg>
-        <svg id="soundIconOff" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h2.586l-1.293-1.293a1 1 0 011.414-1.414l11 11a1 1 0 01-1.414 1.414L5.586 15zM11 17l-5-5m5 5v-5m0 5l5-5"></path></svg>
-      </button>
-    </header>
-
-    <div class="grid md:grid-cols-3 gap-6">
-      <!-- Блок камеры -->
-      <div class="md:col-span-2 bg-slate-800 rounded-2xl overflow-hidden shadow-2xl border border-slate-700 relative aspect-video flex items-center justify-center">
-        
-        <div id="cameraPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 z-20">
-          <svg class="w-16 h-16 text-slate-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-          <p class="text-slate-300 text-lg">Камераны қосу үшін басыңыз</p>
-          <p class="text-slate-500 text-sm">(Нажмите чтобы включить камеру)</p>
-        </div>
-        
-        <video id="video" class="hidden" playsinline autoplay muted></video>
-        <canvas id="canvas" class="w-full h-full object-cover hidden" width="640" height="480"></canvas>
-
-        <div id="angleOverlay" class="hidden absolute top-4 left-4 bg-slate-900/80 backdrop-blur px-4 py-2 rounded-lg border border-slate-700 flex items-center gap-2 z-30">
-          <div id="angleIndicator" class="w-3 h-3 rounded-full bg-emerald-400"></div>
-          <span id="angleText" class="font-mono text-lg">180°</span>
-        </div>
-      </div>
-
-      <!-- Боковая панель статистики -->
-      <div class="flex flex-col gap-6">
-        <!-- Счетчик -->
-        <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center text-center">
-          <h2 class="text-slate-400 text-lg uppercase tracking-wider font-semibold mb-2">Есеп (Счет)</h2>
-          <div id="counterText" class="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500 drop-shadow-sm">
-            0
-          </div>
-        </div>
-
-        <!-- Статус -->
-        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex-1">
-          <h3 class="text-slate-400 text-sm uppercase tracking-wider font-semibold mb-4">Статус</h3>
-          <div class="flex items-start gap-3">
-            <svg id="statusIcon" class="w-6 h-6 text-emerald-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <p id="feedbackText" class="text-lg font-medium text-slate-200">Дайын болыңыз (Готовьтесь)</p>
-          </div>
-
-          <div class="mt-8">
-            <h4 class="text-slate-500 text-xs uppercase tracking-wider mb-2">Ережелер (Правила)</h4>
-            <ul class="text-sm text-slate-400 space-y-2">
-              <li class="flex items-center gap-2">
-                <div class="w-1.5 h-1.5 rounded-full bg-amber-400"></div>
-                Толық отыру (Угол &lt; 90°)
-              </li>
-              <li class="flex items-center gap-2">
-                <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                Толық тұру (Угол &gt; 160°)
-              </li>
-              <li class="flex items-center gap-2">
-                <div class="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
-                Камераға толық көріну
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Кнопка управления -->
-        <button id="toggleBtn" class="w-full py-4 px-6 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-amber-500/20">
-          <svg id="btnIconPlay" class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          <svg id="btnIconStop" class="w-5 h-5 fill-current hidden" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
-          <span id="btnText">Бастау (Старт)</span>
-        </button>
-      </div>
+      <h1 class="text-4xl font-bold text-white mb-3 tracking-tight">Қой көтеру</h1>
+      <p class="text-zinc-400 text-lg">Камераны қосу үшін бастау түймесін басыңыз</p>
     </div>
+
+    <!-- Динамическая шкала приседания (Слева) -->
+    <div id="progressContainer" class="hidden absolute left-6 top-1/2 -translate-y-1/2 w-6 h-2/3 bg-black/40 rounded-full border border-white/10 overflow-hidden backdrop-blur-md z-20 shadow-xl">
+      <div id="progressBar" class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-amber-500 to-yellow-400 transition-all duration-75 ease-out" style="height: 0%"></div>
+    </div>
+
+    <!-- Минималистичный счетчик (Справа сверху) -->
+    <div id="counterContainer" class="hidden absolute top-8 right-10 flex flex-col items-end z-20">
+      <span class="text-white/50 text-sm uppercase tracking-widest font-bold mb-1 drop-shadow-md">Есеп</span>
+      <span id="counterText" class="text-8xl font-black text-white drop-shadow-2xl tabular-nums leading-none">0</span>
+    </div>
+
+    <!-- Кнопка управления (Снизу по центру) -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
+      <button id="toggleBtn" class="px-8 py-4 rounded-full backdrop-blur-xl border font-semibold flex items-center gap-3 transition-all duration-300 hover:scale-105 active:scale-95 shadow-2xl bg-white/10 border-white/20 text-white hover:bg-white/20">
+        <svg id="btnIconPlay" class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="btnIconStop" class="w-5 h-5 fill-current hidden" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+        <span id="btnText" class="text-lg tracking-wide">Бастау</span>
+      </button>
+    </div>
+
   </div>
 
   <script>
-    // --- Логика приложения ---
     const videoElement = document.getElementById('video');
     const canvasElement = document.getElementById('canvas');
     const canvasCtx = canvasElement.getContext('2d');
     
-    // UI Элементы
+    const startOverlay = document.getElementById('startOverlay');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const counterContainer = document.getElementById('counterContainer');
     const counterText = document.getElementById('counterText');
-    const feedbackText = document.getElementById('feedbackText');
-    const angleText = document.getElementById('angleText');
-    const angleOverlay = document.getElementById('angleOverlay');
-    const angleIndicator = document.getElementById('angleIndicator');
-    const cameraPlaceholder = document.getElementById('cameraPlaceholder');
     const toggleBtn = document.getElementById('toggleBtn');
     const btnText = document.getElementById('btnText');
     const btnIconPlay = document.getElementById('btnIconPlay');
     const btnIconStop = document.getElementById('btnIconStop');
-    const soundToggleBtn = document.getElementById('soundToggleBtn');
-    const soundIconOn = document.getElementById('soundIconOn');
-    const soundIconOff = document.getElementById('soundIconOff');
-    const statusIcon = document.getElementById('statusIcon');
 
-    // Состояние
+    // Звук успешного выполнения (короткий приятный "динь")
+    const successSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+
     let isTracking = false;
     let count = 0;
-    let stage = null; // 'up' или 'down'
-    let soundEnabled = true;
+    let isDeep = false;
     let camera = null;
-
-    const kazakhNumbers = [
-      "Нөл", "Бір", "Екі", "Үш", "Төрт", "Бес", "Алты", "Жеті", "Сегіз", "Тоғыз", "Он",
-      "Он бір", "Он екі", "Он үш", "Он төрт", "Он бес", "Он алты", "Он жеті", "Он сегіз", "Он тоғыз", "Жиырма"
-    ];
-
-    function getKazakhNumberText(num) {
-      return num < kazakhNumbers.length ? kazakhNumbers[num] : num.toString();
-    }
-
-    function speak(text) {
-      if (!soundEnabled) return;
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'kk-KZ';
-      window.speechSynthesis.speak(utterance);
-    }
 
     function calculateAngle(a, b, c) {
       const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
@@ -163,18 +90,6 @@
       return angle;
     }
 
-    function updateFeedback(text, isGood) {
-      feedbackText.innerText = text;
-      if (isGood) {
-        statusIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
-        statusIcon.classList.replace('text-amber-400', 'text-emerald-400');
-      } else {
-        statusIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>';
-        statusIcon.classList.replace('text-emerald-400', 'text-amber-400');
-      }
-    }
-
-    // Инициализация MediaPipe Pose
     const pose = new Pose({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
     });
@@ -193,16 +108,13 @@
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
       
-      // Отрисовка кадра
-      canvasCtx.globalCompositeOperation = 'destination-over';
+      // Отрисовываем только видео (без костей и точек)
+      canvasCtx.translate(canvasElement.width, 0);
+      canvasCtx.scale(-1, 1);
       canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-      canvasCtx.globalCompositeOperation = 'source-over';
+      canvasCtx.restore();
 
       if (results.poseLandmarks) {
-        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 4 });
-        drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#FF0000', lineWidth: 2 });
-
-        // Точки ног
         const rightHip = results.poseLandmarks[24];
         const rightKnee = results.poseLandmarks[26];
         const rightAnkle = results.poseLandmarks[28];
@@ -211,7 +123,6 @@
         const leftKnee = results.poseLandmarks[25];
         const leftAnkle = results.poseLandmarks[27];
 
-        // Выбираем ногу, которая лучше видна
         const rightVis = (rightHip.visibility + rightKnee.visibility + rightAnkle.visibility) / 3;
         const leftVis = (leftHip.visibility + leftKnee.visibility + leftAnkle.visibility) / 3;
 
@@ -220,68 +131,66 @@
         const ankle = rightVis > leftVis ? rightAnkle : leftAnkle;
 
         if (hip.visibility > 0.5 && knee.visibility > 0.5 && ankle.visibility > 0.5) {
-          const angle = Math.round(calculateAngle(hip, knee, ankle));
-          angleText.innerText = `${angle}°`;
-
-          if (angle > 160) {
-            if (stage === 'down') {
-              count += 1;
-              counterText.innerText = count;
-              speak(getKazakhNumberText(count));
-              updateFeedback('Жақсы! (Отлично!)', true);
-            }
-            stage = 'up';
-            angleIndicator.classList.replace('bg-amber-400', 'bg-emerald-400');
+          const angle = calculateAngle(hip, knee, ankle);
+          
+          // Вычисляем прогресс приседания (170 градусов = 0%, 90 градусов = 100%)
+          const progress = Math.max(0, Math.min(100, ((170 - angle) / (170 - 90)) * 100));
+          
+          // Обновляем шкалу прогресса
+          progressBar.style.height = `${progress}%`;
+          
+          if (angle <= 90) {
+            // Достигнута нужная глубина - шкала становится ярко-зеленой
+            progressBar.className = "absolute bottom-0 left-0 w-full transition-all duration-75 ease-out bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.8)]";
+            isDeep = true;
+          } else {
+            // В процессе - градиент от желтого к оранжевому
+            progressBar.className = "absolute bottom-0 left-0 w-full transition-all duration-75 ease-out bg-gradient-to-t from-amber-500 to-yellow-400";
           }
-          if (angle < 90) {
-            if (stage === 'up') {
-              updateFeedback('Көтер! (Поднимай!)', false);
-            }
-            stage = 'down';
-            angleIndicator.classList.replace('bg-emerald-400', 'bg-amber-400');
+
+          // Логика засчитывания повторения при подъеме
+          if (angle >= 160 && isDeep) {
+            count += 1;
+            isDeep = false;
+            counterText.innerText = count;
+            
+            // Воспроизводим звук
+            successSound.currentTime = 0;
+            successSound.play().catch(() => {});
           }
         } else {
-          updateFeedback('Денеңіз толық көрінбейді (Тело не видно полностью)', false);
+          // Если человека не видно, сбрасываем шкалу
+          progressBar.style.height = '0%';
         }
-      } else {
-        updateFeedback('Адам табылған жоқ (Человек не найден)', false);
-      }
-      canvasCtx.restore();
-    });
-
-    // Управление звуком
-    soundToggleBtn.addEventListener('click', () => {
-      soundEnabled = !soundEnabled;
-      if (soundEnabled) {
-        soundIconOn.classList.remove('hidden');
-        soundIconOff.classList.add('hidden');
-      } else {
-        soundIconOn.classList.add('hidden');
-        soundIconOff.classList.remove('hidden');
       }
     });
 
-    // Управление трекингом
     toggleBtn.addEventListener('click', () => {
       if (!isTracking) {
-        // Запуск
+        // Инициализация звука (требует действия пользователя в браузере)
+        successSound.play().then(() => {
+          successSound.pause();
+          successSound.currentTime = 0;
+        }).catch(() => {});
+
         isTracking = true;
         count = 0;
-        stage = null;
+        isDeep = false;
         counterText.innerText = '0';
-        updateFeedback('Дайын болыңыз (Готовьтесь)', true);
+        progressBar.style.height = '0%';
         
-        cameraPlaceholder.classList.add('hidden');
+        startOverlay.classList.add('hidden');
         canvasElement.classList.remove('hidden');
-        angleOverlay.classList.remove('hidden');
+        progressContainer.classList.remove('hidden');
+        counterContainer.classList.remove('hidden');
         
-        btnText.innerText = 'Тоқтату (Стоп)';
+        btnText.innerText = 'Тоқтату';
         btnIconPlay.classList.add('hidden');
         btnIconStop.classList.remove('hidden');
-        toggleBtn.classList.replace('bg-amber-500', 'bg-red-500');
-        toggleBtn.classList.replace('hover:bg-amber-600', 'hover:bg-red-600');
-        toggleBtn.classList.replace('text-slate-900', 'text-white');
-        toggleBtn.classList.replace('shadow-amber-500/20', 'shadow-red-500/20');
+        toggleBtn.classList.replace('bg-white/10', 'bg-red-500/20');
+        toggleBtn.classList.replace('border-white/20', 'border-red-500/50');
+        toggleBtn.classList.replace('text-white', 'text-red-100');
+        toggleBtn.classList.replace('hover:bg-white/20', 'hover:bg-red-500/30');
 
         if (!camera) {
           camera = new Camera(videoElement, {
@@ -297,23 +206,23 @@
         camera.start();
 
       } else {
-        // Остановка
         isTracking = false;
         if (camera) {
           camera.stop();
         }
         
-        cameraPlaceholder.classList.remove('hidden');
+        startOverlay.classList.remove('hidden');
         canvasElement.classList.add('hidden');
-        angleOverlay.classList.add('hidden');
+        progressContainer.classList.add('hidden');
+        counterContainer.classList.add('hidden');
         
-        btnText.innerText = 'Бастау (Старт)';
+        btnText.innerText = 'Бастау';
         btnIconPlay.classList.remove('hidden');
         btnIconStop.classList.add('hidden');
-        toggleBtn.classList.replace('bg-red-500', 'bg-amber-500');
-        toggleBtn.classList.replace('hover:bg-red-600', 'hover:bg-amber-600');
-        toggleBtn.classList.replace('text-white', 'text-slate-900');
-        toggleBtn.classList.replace('shadow-red-500/20', 'shadow-amber-500/20');
+        toggleBtn.classList.replace('bg-red-500/20', 'bg-white/10');
+        toggleBtn.classList.replace('border-red-500/50', 'border-white/20');
+        toggleBtn.classList.replace('text-red-100', 'text-white');
+        toggleBtn.classList.replace('hover:bg-red-500/30', 'hover:bg-white/20');
       }
     });
   </script>
